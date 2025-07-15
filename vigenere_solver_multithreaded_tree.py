@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import argparse
 import itertools
+from dict_tree import DictTree
 from dict import Dict
 import match_vs_dict
 import re
@@ -34,12 +35,12 @@ def vigenere_decrypt( ciphertext, keyword ):
     return plaintext
 
 
-def try_word_list( keylist, ciphertext, word_match_dict ):
+def try_word_list( keylist, ciphertext, word_dict_tree ):
     output = ''
     #counter = 1
     match_count = 0
-    #sub_cipher = ciphertext[0:120]
     sub_cipher = ciphertext
+    #sub_cipher = ciphertext[0:120]
     count_ignore_chars = ciphertext.count(' ') + ciphertext.count('.') + ciphertext.count(',') + ciphertext.count('\'')
     sub_count_ignore_chars = sub_cipher.count(' ') + sub_cipher.count('.') + sub_cipher.count(',') + sub_cipher.count('\'')
     t1 = len(ciphertext)-count_ignore_chars
@@ -49,25 +50,44 @@ def try_word_list( keylist, ciphertext, word_match_dict ):
         #    print( str(counter) )
         #guess_plaintext = vigenere_decrypt( ciphertext, key )
         guess_plaintext = vigenere_decrypt( ciphertext, key )
-        #sub_guess_plaintext = guess_plaintext[0:120]
         sub_guess_plaintext = guess_plaintext
-        sub_match_text = word_match_dict.match_vs_dict( sub_guess_plaintext, 1 )
+        #sub_guess_plaintext = guess_plaintext[0:120]
+        txt_len = len(sub_guess_plaintext)
+        sub_match_text = ''
+        x = 0
+        match = 0
+        while x < txt_len:
+            longest_word = word_dict_tree.match_vs_dict( sub_guess_plaintext[x:x+16] )
+            if len(longest_word) > 0:
+                match = 1
+                x += len(longest_word)
+                sub_match_text += longest_word
+            else:
+                sub_match_text += '~'
+                x += 1
         #no_match_count = match_text.count('~') - sub_count_ignore_chars
         sub_no_match_count = sub_match_text.count('~') - sub_count_ignore_chars
         percent = ((t2-sub_no_match_count)/t2)*100
         if percent > 50:
-            match_text = word_match_dict.match_vs_dict( guess_plaintext, 1 )
-            no_match_count = match_text.count('~') - count_ignore_chars
-            percent2 = ((t1-no_match_count)/t1)*100
-            if percent2 > 50:
-                #redo decode for entire ciphertext
-                print( 'key: '+key )
-                print( match_text )
-                print( 'matched '+str(t1-no_match_count)+' of '+str(t1)+' characters, match '+str(percent)+'%' )
-                output += 'key: '+key 
-                output += match_text
-                output += 'matched '+str(t1-no_match_count)+' of '+str(t1)+' characters, match '+str(percent)+'%' 
-                match_count += 1
+            print( 'key: '+key )
+            print( sub_match_text )
+            print( 'matched '+str(t2-sub_no_match_count)+' of '+str(t2)+' characters, match '+str(percent)+'%' )
+            output += 'key: '+key 
+            output += sub_match_text
+            output += 'matched '+str(t2-sub_no_match_count)+' of '+str(t2)+' characters, match '+str(percent)+'%' 
+            match_count += 1
+            #match_text = word_dict_tree.match_vs_dict( guess_plaintext )
+            #no_match_count = match_text.count('~') - count_ignore_chars
+            #percent2 = ((t1-no_match_count)/t1)*100
+            #if percent2 > 50:
+            #    #redo decode for entire ciphertext
+            #    print( 'key: '+key )
+            #    print( match_text )
+            #    print( 'matched '+str(t1-no_match_count)+' of '+str(t1)+' characters, match '+str(percent)+'%' )
+            #    output += 'key: '+key 
+            #    output += match_text
+            #    output += 'matched '+str(t1-no_match_count)+' of '+str(t1)+' characters, match '+str(percent)+'%' 
+            #    match_count += 1
         #counter += 1
     return output
 
@@ -221,7 +241,7 @@ if __name__ == "__main__":
             key_dict = Dict(dictfile)
         else:
             key_dict = Dict()
-        word_dict = Dict( split_by_first_let=1)
+        word_dict_tree = DictTree( )
         key_list = key_dict.get_dict()
         counter = 1
         match_count = 0
@@ -245,11 +265,11 @@ if __name__ == "__main__":
                 b = int(part*a)+1
 
         if args.slice:
-            try_word_list( split_key_lists[segment-1], ciphertext, word_dict )
+            try_word_list( split_key_lists[segment-1], ciphertext, word_dict_tree )
         else:
             threads = []
             for wlist_part in split_key_lists:
-                t = threading.Thread(target=try_word_list, args=(wlist_part, ciphertext, word_dict) )
+                t = threading.Thread(target=try_word_list, args=(wlist_part, ciphertext, word_dict_tree) )
                 threads.append(t)
 
             for t in threads:
