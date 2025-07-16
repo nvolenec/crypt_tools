@@ -7,8 +7,23 @@ import re
 import threading
 import time
 import random
+import freq_analysis
 
 random.seed()
+
+def process_args():
+    parser = argparse.ArgumentParser( prog='monoalpha_sub_solver',
+                                      description='tries to brute force monoalphabet subsitution cipher' )
+    parser.add_argument( 'ciphertext_file' )
+    #parser.add_argument( '-w', '--keyword' )
+    #parser.add_argument( '-d', '--dict' )
+    #parser.add_argument( '--slice', type=str )
+    #parser.add_argument( '-t', '--threads', nargs='?', const=1, type=int, default=8 )
+    parser.add_argument( '--respect_spaces', action='store_true' )
+    parser.add_argument( '--use_freq_analysis', action='store_true' )
+    parser.add_argument( '-w', '--word-guess' )
+    args = parser.parse_args()
+    return args
 
 def gen_subsitution_alphabet( ):
     alpha = ''
@@ -61,105 +76,38 @@ def recursive_levenshtein( string_1, string_2, len_1=None, len_2=None, offset_1=
     memo[key] = dist
     return dist
 
-def process_args():
-    parser = argparse.ArgumentParser( prog='monoalpha_sub_solver',
-                                      description='tries to brute force monoalphabet subsitution cipher' )
-    parser.add_argument( 'ciphertext_file' )
-    parser.add_argument( '-w', '--keyword' )
-    parser.add_argument( '-d', '--dict' )
-    parser.add_argument( '--slice', type=str )
-    parser.add_argument( '-t', '--threads', nargs='?', const=1, type=int, default=8 )
-    parser.add_argument( '-s', '--smart', action='store_true' )
-    args = parser.parse_args()
-    return args
 
 def decrypt( ciphertext, keyword ): #keyword is a 26 char word 
     plaintext = ''
-    c = 0
-    for i, char_x in enumerate(ciphertext):
-        if( ord(char_x) >= 97 and ord(char_x) <=122 ):
-            key_char = keyword[c]
-            plaintext = plaintext + chr(((ord(char_x)-97) - (ord(key_char)-97))%26+97)
-            #print( char_x+'('+str(ord(char_x)-97)+') + '+key_char+'('+str(ord(key_char)-97)+')')
-            c = c + 1
-        else:
-            plaintext += char_x
+    for char_x in ciphertext:
+        char_idx = ord(char_x)-97
+        if char_idx >= 0 and char_idx < 26:
+            plaintext += keyword[char_idx]
     return plaintext
-
-
-def try_word_list( keylist, ciphertext, word_match_dict ):
-    output = ''
-    #counter = 1
-    match_count = 0
-    sub_cipher = ciphertext[0:120]
-    count_ignore_chars = ciphertext.count(' ') + ciphertext.count('.') + ciphertext.count(',') + ciphertext.count('\'')
-    sub_count_ignore_chars = sub_cipher.count(' ') + sub_cipher.count('.') + sub_cipher.count(',') + sub_cipher.count('\'')
-    t1 = len(ciphertext)-count_ignore_chars
-    t2 = len(sub_cipher)-sub_count_ignore_chars
-    for key in keylist:
-        #if counter % 100 == 0:
-        #    print( str(counter) )
-        #guess_plaintext = vigenere_decrypt( ciphertext, key )
-        guess_plaintext = vigenere_decrypt( ciphertext, key )
-        sub_guess_plaintext = guess_plaintext[0:120]
-        sub_match_text = word_match_dict.match_vs_dict( sub_guess_plaintext, 1 )
-        #no_match_count = match_text.count('~') - sub_count_ignore_chars
-        sub_no_match_count = sub_match_text.count('~') - sub_count_ignore_chars
-        percent = ((t2-sub_no_match_count)/t2)*100
-        if percent > 50:
-            match_text = word_match_dict.match_vs_dict( guess_plaintext, 1 )
-            no_match_count = match_text.count('~') - count_ignore_chars
-            percent2 = ((t1-no_match_count)/t1)*100
-            if percent2 > 50:
-                #redo decode for entire ciphertext
-                print( 'key: '+key )
-                print( match_text )
-                print( 'matched '+str(t1-no_match_count)+' of '+str(t1)+' characters, match '+str(percent)+'%' )
-                output += 'key: '+key 
-                output += match_text
-                output += 'matched '+str(t1-no_match_count)+' of '+str(t1)+' characters, match '+str(percent)+'%' 
-                match_count += 1
-        #counter += 1
-    return output
-
-
-def try_key_length( key_length, one_letter_word_offsets, key_mask_try, dictfile ):
-    matching_words = []
-    word_len_mask = ['.'] * key_length
-    bad_key_len = False
-    for d in one_letter_word_offsets:
-        if word_len_mask[d%key_length]  == '.' or word_len_mask[d%key_length] == key_mask_try[d]:
-            word_len_mask[d%key_length] = key_mask_try[d]
-            #print( word_len_mask )
-        else:
-            #print( 'conflict found, key cannot be of len '+str(key_length) )
-            bad_key_len = True
-        #print( key_mask_try[d]+'  '+str(d%key_length) )
-    if bad_key_len == False:
-        word_regex = "".join(word_len_mask)
-        #print( "trying to match" + word_regex )
-        re_pattern = re.compile( word_regex )
-        #length_dict = get_from_dict.get_words_of_len( key_length )
-        if dictfile:
-            dict = Dict(dictfile)
-        else:
-            dict = Dict()
-        length_dict = dict.get_words_of_len( key_length )
-        for w in length_dict:
-            if re.fullmatch( re_pattern, w ) != None:
-                matching_words.append( w )
-    return matching_words
 
 
 if __name__ == "__main__":
     args = process_args()
-    f = open( args.ciphertext_file, 'r' )
-    ciphertext = f.read().lower()
-    ciphertext_no_spaces = ''
-    dictfile = args.dict
-    for a in ciphertext:
-        if( ord(a) >= 97 and ord(a) <=122 ):
-            ciphertext_no_spaces += a
+    with open( args.ciphertext_file, 'r' ) as f:
+        ciphertext = f.read().lower()
+    respect_spaces = args.respect_spaces
+    word_guess = args.word_guess:
+    words = []
+    if respect_spaces:
+        words = ciphertext.split()
+
+    if respect_spaces and word_guess:
+        #check for words that match the length of the guess word
+        len_matches = {}
+        for word in words:
+            if len(word) == len(word_guess)
+                if word not in len_matches:
+                    len_matches[word] = ''
+        print( 'there are '+len(len_matches)+' word of the same length as '+word_guess )
+    if args.use_freq_analysis:
+        freq_analysis = freq_analysis.do_freq_count( ciphertext)
+
+
     #TODO:before doing any analysis run ioc and kasski examination 
 
     print( ciphertext )
@@ -179,7 +127,8 @@ if __name__ == "__main__":
         #word_list = get_from_dict.get_words_of_len( int(args.length) )
         word_list_sz = len( word_list )
         print( str(word_list_sz)+' words of length '+args.length )
-        if args.smart:
+        if args.use_freq_analysis:   #don't do raw brute force run freq_analysis and generate random keys similar to the
+                                     #frequencey analysis
             ciphertext_split = ciphertext.split()
             ciphertext_split_len = []
             ciphertext_split_offset = [] #does not count spaces

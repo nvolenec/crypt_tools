@@ -52,19 +52,7 @@ def try_word_list( keylist, ciphertext, word_dict_tree ):
         guess_plaintext = vigenere_decrypt( ciphertext, key )
         sub_guess_plaintext = guess_plaintext
         #sub_guess_plaintext = guess_plaintext[0:120]
-        txt_len = len(sub_guess_plaintext)
-        sub_match_text = ''
-        x = 0
-        match = 0
-        while x < txt_len:
-            longest_word = word_dict_tree.match_vs_dict( sub_guess_plaintext[x:x+16] )
-            if len(longest_word) > 0:
-                match = 1
-                x += len(longest_word)
-                sub_match_text += longest_word
-            else:
-                sub_match_text += '~'
-                x += 1
+        sub_match_text = word_dict_tree.match_vs_dict( sub_guess_plaintext )
         #no_match_count = match_text.count('~') - sub_count_ignore_chars
         sub_no_match_count = sub_match_text.count('~') - sub_count_ignore_chars
         percent = ((t2-sub_no_match_count)/t2)*100

@@ -41,7 +41,7 @@ class DictTree:
     def get_dicttree(self):
         return self.tree
 
-    def match_vs_dict( self, text ):
+    def match_vs_dict_single_word( self, text ):
         #(words, word_dict ) = load_dict()
         text = text.lower()
         text_len = len( text )
@@ -68,5 +68,37 @@ class DictTree:
                     longest_match = n.identifier
 
         return longest_match
+
+
+    def match_vs_dict( self, guess_plaintext ):
+        txt_len = len( guess_plaintext )
+        x = 0
+        match_text = ''
+        while x < txt_len:
+            longest_word = self.match_vs_dict_single_word( guess_plaintext[x:x+16] )
+            if len(longest_word) > 0:
+                x += len(longest_word)
+                match_text += longest_word
+            else:
+                match_text += '~'
+                x += 1
+        
+        return match_text
+
+
+    def match_vs_dict_respect_spaces( self, guess_plaintext ):
+        txt_len = len( guess_plaintext )
+        x = 0
+        match_text = ''
+        words = guess_plaintext.split(' ')
+        for word in words:
+            longest_word = self.match_vs_dict_single_word( word )
+            if len(longest_word) == len(word):
+                match_text += longest_word
+            else:
+                match_text += '~'*len(longest_word)
+            x += len(longest_word)
+        
+        return match_text
     
 
