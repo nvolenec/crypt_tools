@@ -19,10 +19,10 @@ def do_freq_count( input_str ):
     char_count = {}
     for char in input_str:
         if char not in ['\n']:
-            if char.upper() in char_count:
-                char_count[char.upper()] += 1
+            if char.lower() in char_count:
+                char_count[char.lower()] += 1
             else:
-                char_count[char.upper()] = 1
+                char_count[char.lower()] = 1
     return {k:v for k, v in sorted(char_count.items(), key=lambda item: item[1], reverse=True)}
 
 

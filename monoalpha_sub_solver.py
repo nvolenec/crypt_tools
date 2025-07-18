@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import argparse
+import string
 import itertools
 from dict import Dict
 import match_vs_dict
@@ -8,6 +9,8 @@ import threading
 import time
 import random
 import freq_analysis
+import copy
+import english_letter_freq as elf
 
 random.seed()
 
@@ -15,15 +18,76 @@ def process_args():
     parser = argparse.ArgumentParser( prog='monoalpha_sub_solver',
                                       description='tries to brute force monoalphabet subsitution cipher' )
     parser.add_argument( 'ciphertext_file' )
-    #parser.add_argument( '-w', '--keyword' )
-    #parser.add_argument( '-d', '--dict' )
-    #parser.add_argument( '--slice', type=str )
-    #parser.add_argument( '-t', '--threads', nargs='?', const=1, type=int, default=8 )
-    parser.add_argument( '--respect_spaces', action='store_true' )
-    parser.add_argument( '--use_freq_analysis', action='store_true' )
+    parser.add_argument( '-r', '--respect_spaces', action='store_true' )
+    parser.add_argument( '-f', '--use_freq_analysis', action='store_true' )
     parser.add_argument( '-w', '--word-guess' )
     args = parser.parse_args()
     return args
+
+def brute_chi_sq(ciphertext_freq_analysis, ciphertext ):
+    #build normalized sqared error for every letter -> letter combination, 26^2 
+    c = 0
+    for a in ciphertext:
+        if a in string.ascii_lowercase:
+            c += 1
+    sum = 0.0
+    norm_sq_err_dict = {}
+    ordered_norm_sq_err_dict = {}
+    letters_in_freq_order = [ 'e', 't', 'a', 'o', 'i', 'n', 's', 'h', 'r', 'd', 'l', 'u',
+     'c', 'm', 'w', 'f', 'g', 'p', 'y', 'b', 'x', 'v', 'k', 'j', 'q', 'z' ]
+    for a in letters_in_freq_order[::-1]:
+        norm_sq_err_dict[a] = { }
+        ordered_norm_sq_err_dict = {}
+        for b in letters_in_freq_order[::-1]:
+            x= (abs(ciphertext_freq_analysis[a] - elf.english_letter_freqs[b.upper()]*c)**2)/(elf.english_letter_freqs[b.upper()]*c)
+            norm_sq_err_dict[a][b] = x
+
+    for a in letters_in_freq_order[::-1]:
+        ordered_norm_sq_err_dict[a] = dict(sorted(norm_sq_err_dict[a].items(), key=lambda item: item[1]))
+    #print( '---------')
+    #print( norm_sq_err_dict['e'] )
+    #print( '---')
+    #print( ordered_norm_sq_err_dict['e'] )
+    #print( '---------')
+    return ordered_norm_sq_err_dict
+
+
+
+def chi_sq( ciphertext_freq_analysis, ciphertext ):
+    c = 0
+    for a in ciphertext:
+        if a in ascii_lowercase:
+            c += 1
+    sum = 0.0
+    for a in ascii_lowercase:
+        sum += (abs(ciphertext_freq_analysis[a] - elf.english_letter_freqs[a.upper()])**2)/elf.english_letter_freqs[a.upper()]
+
+
+
+
+def freq_diff( ciphertext_freq_analysis, ciphertext ):
+    sum = 0.0
+    c = 0
+    for a in ciphertext:
+        if a in ascii_lowercase:
+            c += 1
+    for lett in ascii_lowercase:
+        sum += abs(ciphertext_freq_analysis[lett]/c - elf.english_letter_freqs[lett.upper()])/26
+    return sum
+
+
+def word_profile( word ):
+    seen = []
+    new_word = ''
+    counter = 1
+    for l in word:
+        if l in seen:
+            new_word += str(seen.index(l)+1)
+        else:
+            new_word += str(counter)
+            seen.append(l)
+            counter += 1
+    return new_word
 
 def gen_subsitution_alphabet( ):
     alpha = ''
@@ -77,12 +141,16 @@ def recursive_levenshtein( string_1, string_2, len_1=None, len_2=None, offset_1=
     return dist
 
 
-def decrypt( ciphertext, keyword ): #keyword is a 26 char word 
+def decrypt( ciphertext, keyword ): #keyword is a list of 26 ints
     plaintext = ''
     for char_x in ciphertext:
         char_idx = ord(char_x)-97
         if char_idx >= 0 and char_idx < 26:
-            plaintext += keyword[char_idx]
+            #print( char_x+'('+str(char_idx)+') => '+chr(keyword[char_idx]+97)+'('+str(keyword[char_idx])+')' )
+            plaintext += chr(keyword[char_idx]+97)
+        else:
+            #print( str(char_idx)+' out of range' )
+            plaintext += char_x
     return plaintext
 
 
@@ -91,175 +159,148 @@ if __name__ == "__main__":
     with open( args.ciphertext_file, 'r' ) as f:
         ciphertext = f.read().lower()
     respect_spaces = args.respect_spaces
-    word_guess = args.word_guess:
-    words = []
+    word_guess = args.word_guess
+    if args.word_guess:
+        word_guess = args.word_guess.lower()
+        word_guess_profile = word_profile(word_guess)
+        words = []
+    print( ciphertext )
     if respect_spaces:
         words = ciphertext.split()
 
     if respect_spaces and word_guess:
-        #check for words that match the length of the guess word
-        len_matches = {}
-        for word in words:
-            if len(word) == len(word_guess)
-                if word not in len_matches:
-                    len_matches[word] = ''
-        print( 'there are '+len(len_matches)+' word of the same length as '+word_guess )
-    if args.use_freq_analysis:
-        freq_analysis = freq_analysis.do_freq_count( ciphertext)
-
-
-    #TODO:before doing any analysis run ioc and kasski examination 
-
-    print( ciphertext )
-    plaintext = ''
-    if args.keyword is not None:
-        keyword = args.keyword.lower()
-        print( keyword )
-        plaintext = vigenere_decrypt( ciphertext, keyword )
-        print(plaintext)
-    elif args.length is not None:
-        #first try all words in dict file of length args.length
-        if dictfile:
-            dict = Dict(dictfile)
-        else:
-            dict = Dict()
-        word_list = dict.get_words_of_len( int(args.length) )
-        #word_list = get_from_dict.get_words_of_len( int(args.length) )
-        word_list_sz = len( word_list )
-        print( str(word_list_sz)+' words of length '+args.length )
-        if args.use_freq_analysis:   #don't do raw brute force run freq_analysis and generate random keys similar to the
-                                     #frequencey analysis
-            ciphertext_split = ciphertext.split()
-            ciphertext_split_len = []
-            ciphertext_split_offset = [] #does not count spaces
-            sum = 0
-            for w in ciphertext_split:
-                ciphertext_split_len.append( len( w ) )
-                ciphertext_split_offset.append( sum )
-                sum += len(w)
-            one_letter_word_indx = []
-            iterator_input_list = []
-            pos = 0
-            text_mask = ''
-            for index, value in enumerate( ciphertext_split_len ):
-                if value == 1:   #find 1 letter words
-                    one_letter_word_indx.append(pos)
-                    iterator_input_list.append( ['a','i'] )
-                    text_mask += 'X'
-                else:
-                    pos += value
-                    text_mask += '~' * value
-            enum_one_letter_words = []
-            
-            all_possible_one_letter_word_combos = list( itertools.product( ['a','i'], repeat=len(one_letter_word_indx) ) )
-
-            key_mask_try = ''
-            first = 1
-            print( all_possible_one_letter_word_combos )
-            print( all_possible_one_letter_word_combos[0] )
-            print( ciphertext )
-            print( ciphertext_no_spaces )
-            print( text_mask )
-            one_letter_word_offsets = []
-            first = 1
-            for a in all_possible_one_letter_word_combos:
-                #print( a )
-                #key_mask_try = text_mask
-                key_mask_try = ''
-                counter = 0
-                for i, c in enumerate(text_mask):
-                    if c == '~':
-                        key_mask_try += '~'
-                    if c == 'X':
-                        if first:
-                            one_letter_word_offsets.append( i )
-                        #print( counter )
-                        #key_mask_try += a[counter]
-                        key_mask_try += chr(((ord(ciphertext_no_spaces[i])-97) - (ord(a[counter])-97))%26+97)
-                        counter += 1
-                        #print( key_mask_try )
-                first = 0
-                print( key_mask_try )
-                guess_keys = try_key_length( int(args.length), one_letter_word_offsets, key_mask_try, dictfile )
-                if guess_keys:
-                    print( guess_keys )
-                    for guess_key in guess_keys:
-                        guess_plaintext = vigenere_decrypt( ciphertext, guess_key )
-                        match_text = match_vs_dict.match_vs_dict( guess_plaintext, 1 )
-                        #print( guess_plaintext )
-                        print( match_text )
-                        count_ignore_chars = ciphertext.count(' ') + ciphertext.count('.') + ciphertext.count(',') + ciphertext.count('\'')
-                        no_match_count = match_text.count('~') - count_ignore_chars
-                        t1 = len(ciphertext)-count_ignore_chars
-                        percent = ((t1-no_match_count)/t1)*100
-                        print( 'matched '+str(t1-no_match_count)+' of '+str(t1)+' characters, match '+str(percent)+'%' )
-
-            print( one_letter_word_offsets )
-
-        else:  #have length but not smart, raw brute force key try
-            counter = 1 
-            for word in word_list:
-                #if counter % 100 == 0:
-                #    print( str(counter) )
-                guess_plaintext = vigenere_decrypt( ciphertext, word )
-                match_text = match_vs_dict.match_vs_dict( guess_plaintext, 1 )
-                #print( guess_plaintext )
-                count_ignore_chars = ciphertext.count(' ') + ciphertext.count('.') + ciphertext.count(',') + ciphertext.count('\'')
-                no_match_count = match_text.count('~') - count_ignore_chars
-                t1 = len(ciphertext)-count_ignore_chars
-                percent = ((t1-no_match_count)/t1)*100
-                if percent > 50:
-                    print( 'key: '+word )
-                    print( match_text )
-                    print( 'matched '+str(t1-no_match_count)+' of '+str(t1)+' characters, match '+str(percent)+'%' )
-                counter += 1
-
-            #print( one_letter_word_offsets )
-
-    else: #bruteforce without length -- this assumes key is a single word
-        if dictfile:
-            key_dict = Dict(dictfile)
-        else:
-            key_dict = Dict()
-        word_dict = Dict( split_by_first_let=1)
-        key_list = key_dict.get_dict()
-        counter = 1
-        match_count = 0
-        if args.slice:   #expecting input of the format 1/16, 5/32, 10/10, etc.  1-indexed
-            (s, t) = args.slice.split( '/', 2 )
-            threadcount = int(t)
-            segment = int(s)
-            print( s+'/'+t )
-        else:
-            threadcount=args.threads
-        split_key_lists = []
-        b= 0
-        part = len(key_list) / threadcount
-        for a in range(1,threadcount+1):
-            if a == threadcount:
-                split_key_lists.append( key_list[b:len(key_list)] )
-                #print( 'key_list['+str(b)+':'+str(len(key_list))+']' )
+        len_matches = {} #{ length: [count,[word list], [word indexs]], ... }
+        unique_len_matches = {} #{ length: [count,[word list]], ... }
+        for i, word in enumerate(words):
+            word_len = len(word)
+            if word_len  not in len_matches:
+                len_matches[word_len] = [1, [word], [i]]
             else:
-                split_key_lists.append( key_list[b:int(part*a)] )
-                #print( 'key_list['+str(b)+':'+str(int(part*a))+']' )
-                b = int(part*a)+1
+                #print( len_matches[word_len] )
+                len_matches[word_len][0] += 1
+                len_matches[word_len][1].append( word )
+                len_matches[word_len][2].append( i )
+        if word_guess:
+            for key, val in len_matches.items():
+                a = list(set(val[1]))
+                unique_len_matches[key] = [len(a), a]
+            to_remove = []
+            for word in unique_len_matches[len(word_guess)][1]:
+                if word_profile(word) != word_guess_profile:
+                    print( word+'('+word_profile(word)+') incompatible with '+word_guess_profile+'('+word_guess+')')
+                    to_remove.append(word)
+                #else:
+                #    print( word+'('+word_profile(word)+') compatible with '+word_guess_profile+'('+word_guess+')')
+            for word in to_remove:
+                len_matches[len(word_guess)][0] -= 1
+                unique_len_matches[len(word_guess)][0] -= 1
+                unique_len_matches[len(word_guess)][1].remove(word)
 
-        if args.slice:
-            try_word_list( split_key_lists[segment-1], ciphertext, word_dict )
-        else:
-            threads = []
-            for wlist_part in split_key_lists:
-                t = threading.Thread(target=try_word_list, args=(wlist_part, ciphertext, word_dict) )
-                threads.append(t)
+            #check for words that match the length of the guess word
+            #if len(word) == len(word_guess):
+            #    if word not in unique_len_matches:
+            #        unique_len_matches[word] = ''
+            print( 'there are '+str(unique_len_matches[len(word_guess)][0])+' unique words of the same length as '+word_guess+', '+str(len_matches[len(word_guess)][0])+' total' )
+            print( 'len_matches' )
+            print( len_matches[len(word_guess)] )
+            print( 'unique_len_matches' )
+            print( unique_len_matches[len(word_guess)] )
 
-            for t in threads:
-                t.start()
-
-            for t in threads:
-                t.join()
+    use_case = 0
+    random.seed()
+    alphabet = range(0,26)
+    if args.use_freq_analysis:
+        ciphertext_freq_analysis = freq_analysis.do_freq_count( ciphertext )
+        print( 'freq_analysis:' )
+        print( ciphertext_freq_analysis )
+        if respect_spaces and word_guess: 
+            #placeholder 
+            use_case = 1 
+        elif respect_spaces: 
+            ciphertext_freq_analysis = freq_analysis.do_freq_count( ciphertext )
+            brute_chi_dict = brute_chi_sq( ciphertext_freq_analysis, ciphertext )
+            letters_in_freq_order = { 'e', 't', 'a', 'o', 'i', 'n', 's', 'h', 'r', 'd', 'l', 'u',
+             'c', 'm', 'w', 'f', 'g', 'p', 'y', 'b', 'x', 'v', 'k', 'j', 'q', 'z', }
+            c = 0
+            #while c < 26*26:
+            while c < 20:
+                used_list = []
+                tmp_alpha = {}
+                tmp_alpha_l = []
+                random_order = list(range(0,26))
+                random.shuffle(random_order)
             
-            #if we have no good matchs after running entire dictionary we need to do something smarter
-            #maybe with ioc because trying 2 word pairs will take 133 hours on my laptop. 
-            #Single word run takes 1m2.3s dict file has 8,102 words
+                for z in random_order:
+                    a = chr(z+97)
+                    #print( '-------'+a+'--------' )
+                    #print( brute_chi_dict[a] )
+                    for k,v in brute_chi_dict[a].items():
+                        if k not in used_list:
+                            used_list.append(k)
+                            tmp_alpha[ord(k)-97] = z  #ord(a)-97    #[a]->b or [b]->a?
+                            break
+                for x in range(0,26):
+                    tmp_alpha_l.append( tmp_alpha[x] )
+
+                print( tmp_alpha )
+                print( tmp_alpha_l )
+                c += 1
+        else: 
+            #placeholder
+            use_case = 3 
+    else: #no freq_analysis 
+        if respect_spaces and word_guess: 
+            for word in unique_len_matches[len(word_guess)][1]: 
+                alpha = [ '~' for _ in range(26) ]
+                alpha_1 = list(range(0,26))
+                exclude_list = []
+                exclude_pos = []
+                print('------'+word_guess+'=>'+word+'--------')
+                for i, lett in enumerate(word):
+                    #print( str(i)+'  '+lett )
+                    #set guess word in alphabet
+                    alpha[ord(lett)-97] = ord(word_guess[i])-97
+                    alpha_1.remove(ord(word_guess[i])-97)
+                    #exclude_list.append(ord(word_guess[i])-97)
+                    exclude_pos.append(ord(lett)-97)
+                #print('alpha')
+                #print(alpha)
+                random.shuffle(alpha_1)
+                #print('alpha_1')
+                #print(alpha_1)
+                c = 0
+                for i in range(0,26):
+                    if i not in exclude_pos:
+                        alpha[i] = alpha_1[c]
+                        c += 1
+                #print('alpha')
+                print(alpha)
+                plaintext = decrypt( ciphertext, alpha )
+                print( plaintext )
+
+
+                #populate rest of alphabet randomly
+        elif respect_spaces:
+            c = 1
+            while c <= 100:
+                alpha_copy = list(range(0,26))
+                random.shuffle(alpha_copy) 
+                print( alpha_copy )
+                plaintext = decrypt( ciphertext, alpha_copy )
+                print( plaintext )
+                c += 1
+        else: 
+            c = 1
+            while c <= 100:
+                alpha_copy = list(range(0,26))
+                random.shuffle(alpha_copy) 
+                print( alpha_copy )
+                plaintext = decrypt( ciphertext, alpha_copy )
+                print( plaintext )
+                c += 1
+
+
+
+    plaintext = ''
 
 

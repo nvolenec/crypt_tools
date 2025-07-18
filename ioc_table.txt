@@ -1,0 +1,12 @@
+Index of Coincidence 	Estimated length of keyword 
+0.0660 			1
+0.0520 			2
+0.0473 			3
+0.0449 			4
+0.0435 			5
+0.0426 			6
+0.0419 			7	
+0.0414 			8
+0.0410 			9
+0.0407 			10
+0.0388			infinity-random data
