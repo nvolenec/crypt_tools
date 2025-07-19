@@ -1,15 +1,12 @@
 #!/usr/bin/python3
 import argparse
 import string
-import itertools
 from dict import Dict
 import match_vs_dict
-import re
 import threading
-import time
 import random
 import freq_analysis
-import copy
+from collections import Counter
 import english_letter_freq as elf
 
 random.seed()
@@ -26,6 +23,9 @@ def process_args():
 
 def brute_chi_sq(ciphertext_freq_analysis, ciphertext ):
     #build normalized sqared error for every letter -> letter combination, 26^2 
+    #for this data set the returned dict of dicts: ordered_norm_sq_err[a][b]
+    #a represents ciphertext and b represents plaintext
+    #
     c = 0
     for a in ciphertext:
         if a in string.ascii_lowercase:
@@ -169,7 +169,7 @@ if __name__ == "__main__":
         words = ciphertext.split()
 
     if respect_spaces and word_guess:
-        len_matches = {} #{ length: [count,[word list], [word indexs]], ... }
+        len_matches = {} #{ length: [count, [word list], [word indexs]], ... }
         unique_len_matches = {} #{ length: [count,[word list]], ... }
         for i, word in enumerate(words):
             word_len = len(word)
@@ -184,7 +184,8 @@ if __name__ == "__main__":
             for key, val in len_matches.items():
                 a = list(set(val[1]))
                 unique_len_matches[key] = [len(a), a]
-            to_remove = []
+            #remove word matches that have incompatible profiles
+            to_remove = []  
             for word in unique_len_matches[len(word_guess)][1]:
                 if word_profile(word) != word_guess_profile:
                     print( word+'('+word_profile(word)+') incompatible with '+word_guess_profile+'('+word_guess+')')
@@ -200,30 +201,79 @@ if __name__ == "__main__":
             #if len(word) == len(word_guess):
             #    if word not in unique_len_matches:
             #        unique_len_matches[word] = ''
-            print( 'there are '+str(unique_len_matches[len(word_guess)][0])+' unique words of the same length as '+word_guess+', '+str(len_matches[len(word_guess)][0])+' total' )
-            print( 'len_matches' )
-            print( len_matches[len(word_guess)] )
-            print( 'unique_len_matches' )
-            print( unique_len_matches[len(word_guess)] )
+            #print( 'there are '+str(unique_len_matches[len(word_guess)][0])+' unique words of the same length as '+word_guess+', '+str(len_matches[len(word_guess)][0])+' total' )
+            #print( 'len_matches' )
+            #print( len_matches[len(word_guess)] )
+            #print( 'unique_len_matches' )
+            #print( unique_len_matches[len(word_guess)] )
 
-    use_case = 0
-    random.seed()
     alphabet = range(0,26)
     if args.use_freq_analysis:
         ciphertext_freq_analysis = freq_analysis.do_freq_count( ciphertext )
+        brute_chi_dict = brute_chi_sq( ciphertext_freq_analysis, ciphertext )
+        letters_in_freq_order = { 'e', 't', 'a', 'o', 'i', 'n', 's', 'h', 'r', 'd', 'l', 'u',
+        'c', 'm', 'w', 'f', 'g', 'p', 'y', 'b', 'x', 'v', 'k', 'j', 'q', 'z', }
         print( 'freq_analysis:' )
         print( ciphertext_freq_analysis )
-        if respect_spaces and word_guess: 
-            #placeholder 
-            use_case = 1 
-        elif respect_spaces: 
-            ciphertext_freq_analysis = freq_analysis.do_freq_count( ciphertext )
-            brute_chi_dict = brute_chi_sq( ciphertext_freq_analysis, ciphertext )
-            letters_in_freq_order = { 'e', 't', 'a', 'o', 'i', 'n', 's', 'h', 'r', 'd', 'l', 'u',
-             'c', 'm', 'w', 'f', 'g', 'p', 'y', 'b', 'x', 'v', 'k', 'j', 'q', 'z', }
+        if respect_spaces and word_guess:       #CASE 1: use_freq_analysis, respect_spaces, word guess flags
+            for word in unique_len_matches[len(word_guess)][1]: 
+                alpha = [ '~' for _ in range(0,26) ]
+                #alpha_1 = list(range(0,26))
+                #exclude_list = []
+                exclude_pos = []
+                tmp_alpha = {}
+                tmp_alpha_l = []
+                print('------'+word_guess+'=>'+word+'--------')
+                for i, lett in enumerate(word):
+                    #print( str(i)+'  '+lett )
+                    #set guess word in alphabet
+                    alpha[ord(lett)-97] = ord(word_guess[i])-97
+                    #alpha_1.remove(ord(word_guess[i])-97)
+                    #exclude_list.append(ord(word_guess[i])-97)
+                    exclude_pos.append(ord(lett)-97)
+                #populate rest of alphabet based on freq_analysis
+                print( 'alpha' )
+                print( alpha )
+                random_order = list(range(0,26))
+                for a in range(0,26):
+                    if alpha[a] != '~':
+                        random_order.remove(a)
+                random.shuffle(random_order)
+                print( 'random_order' )
+                print( random_order )
+                for z in random_order:
+                    a = chr(z+97)
+                    #print( str(z)+'('+a+')==' )
+                    if z not in exclude_pos and alpha[z] == '~':
+                        c = 0
+                        for k,v in brute_chi_dict[a].items():
+                            if ord(k)-97 not in alpha:
+                                #exclude_list.append(k)
+                                #tmp_alpha[ord(k)-97] = z
+                                alpha[z] = ord(k)-97
+                                #print( k+'('+str(ord(k)-97)+') is '+str(c)+' best match' )
+                                #print( alpha )
+                                break
+                            c += 1
+                for x in range(0,26):
+                    #tmp_alpha_l.append( tmp_alpha[x] )
+                    tmp_alpha_l.append( alpha[x] )
+                #print( tmp_alpha )
+                #print( 'alpha' )
+                #print( alpha )
+                #dupes = [k for k,v in Counter(alpha).items() if v > 1]
+                #if len( dupes ) == 0:
+                #    print( 'alpha list has no duplicates' )
+                #else:
+                #    print( 'alpha list has duplicates:' )
+                #    print( dupes )
+                plaintext = decrypt( ciphertext, alpha )
+                print( plaintext )
+
+
+        elif respect_spaces:                    #CASE 2: use_freq_analysis, respect_spaces flags
             c = 0
-            #while c < 26*26:
-            while c < 20:
+            while c < 26*26:
                 used_list = []
                 tmp_alpha = {}
                 tmp_alpha_l = []
@@ -237,19 +287,42 @@ if __name__ == "__main__":
                     for k,v in brute_chi_dict[a].items():
                         if k not in used_list:
                             used_list.append(k)
-                            tmp_alpha[ord(k)-97] = z  #ord(a)-97    #[a]->b or [b]->a?
+                            tmp_alpha[ord(k)-97] = z    #[a]->b or [b]->a?
                             break
                 for x in range(0,26):
                     tmp_alpha_l.append( tmp_alpha[x] )
 
-                print( tmp_alpha )
-                print( tmp_alpha_l )
+                #print( tmp_alpha )
+                #print( tmp_alpha_l )
                 c += 1
-        else: 
-            #placeholder
-            use_case = 3 
+        else:                                   #CASE 3: use_freq_analysis flag only
+            c = 0
+            while c < 26*26:
+                used_list = []
+                tmp_alpha = {}
+                tmp_alpha_l = []
+                random_order = list(range(0,26))
+                random.shuffle(random_order)
+            
+                for z in random_order:
+                    a = chr(z+97)
+                    #print( '-------'+a+'--------' )
+                    #print( brute_chi_dict[a] )
+                    for k,v in brute_chi_dict[a].items():
+                        if k not in used_list:
+                            used_list.append(k)
+                            tmp_alpha[ord(k)-97] = z    #[a]->b or [b]->a?
+                            break
+                for x in range(0,26):
+                    tmp_alpha_l.append( tmp_alpha[x] )
+
+                #print( tmp_alpha )
+                #print( tmp_alpha_l )
+                c += 1
+
     else: #no freq_analysis 
-        if respect_spaces and word_guess: 
+        if respect_spaces and word_guess:       #CASE 4: respect_spaces, word guess flags
+
             for word in unique_len_matches[len(word_guess)][1]: 
                 alpha = [ '~' for _ in range(26) ]
                 alpha_1 = list(range(0,26))
@@ -268,6 +341,8 @@ if __name__ == "__main__":
                 random.shuffle(alpha_1)
                 #print('alpha_1')
                 #print(alpha_1)
+
+                #populate rest of alphabet randomly
                 c = 0
                 for i in range(0,26):
                     if i not in exclude_pos:
@@ -279,8 +354,7 @@ if __name__ == "__main__":
                 print( plaintext )
 
 
-                #populate rest of alphabet randomly
-        elif respect_spaces:
+        elif respect_spaces:                    #CASE 5: respect_spaces flag
             c = 1
             while c <= 100:
                 alpha_copy = list(range(0,26))
@@ -289,7 +363,7 @@ if __name__ == "__main__":
                 plaintext = decrypt( ciphertext, alpha_copy )
                 print( plaintext )
                 c += 1
-        else: 
+        else:                                   #CASE 6: no flags
             c = 1
             while c <= 100:
                 alpha_copy = list(range(0,26))
