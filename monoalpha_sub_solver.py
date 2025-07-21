@@ -38,9 +38,15 @@ def brute_chi_sq(ciphertext_freq_analysis, ciphertext ):
     for a in letters_in_freq_order[::-1]:
         norm_sq_err_dict[a] = { }
         ordered_norm_sq_err_dict = {}
-        for b in letters_in_freq_order[::-1]:
-            x= (abs(ciphertext_freq_analysis[a] - elf.english_letter_freqs[b.upper()]*c)**2)/(elf.english_letter_freqs[b.upper()]*c)
-            norm_sq_err_dict[a][b] = x
+        if a in ciphertext_freq_analysis:
+            for b in letters_in_freq_order[::-1]:
+                if b in ciphertext_freq_analysis:
+                    #print( 'ciphertext_freq_analysis['+a+']' )
+                    #print( ciphertext_freq_analysis[a] )
+                    #print( 'elf.english_letter_freqs[b.upper('+b.upper()+')]' )
+                    #print( elf.english_letter_freqs[b.upper()] )
+                    x= (abs(ciphertext_freq_analysis[a] - elf.english_letter_freqs[b.upper()]*c)**2)/(elf.english_letter_freqs[b.upper()]*c)
+                    norm_sq_err_dict[a][b] = x
 
     for a in letters_in_freq_order[::-1]:
         ordered_norm_sq_err_dict[a] = dict(sorted(norm_sq_err_dict[a].items(), key=lambda item: item[1]))
@@ -210,6 +216,8 @@ if __name__ == "__main__":
     alphabet = range(0,26)
     if args.use_freq_analysis:
         ciphertext_freq_analysis = freq_analysis.do_freq_count( ciphertext )
+        print( 'ciphertext_freq_analysis' )
+        print( ciphertext_freq_analysis )
         brute_chi_dict = brute_chi_sq( ciphertext_freq_analysis, ciphertext )
         letters_in_freq_order = { 'e', 't', 'a', 'o', 'i', 'n', 's', 'h', 'r', 'd', 'l', 'u',
         'c', 'm', 'w', 'f', 'g', 'p', 'y', 'b', 'x', 'v', 'k', 'j', 'q', 'z', }
@@ -314,7 +322,8 @@ if __name__ == "__main__":
                             tmp_alpha[ord(k)-97] = z    #[a]->b or [b]->a?
                             break
                 for x in range(0,26):
-                    tmp_alpha_l.append( tmp_alpha[x] )
+                    if x in tmp_alpha:
+                        tmp_alpha_l.append( tmp_alpha[x] )
 
                 #print( tmp_alpha )
                 #print( tmp_alpha_l )
