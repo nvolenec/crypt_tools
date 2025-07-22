@@ -1,13 +1,14 @@
 #!/usr/bin/python3
 import argparse
 import string
-from dict import Dict
 import match_vs_dict
 import threading
 import random
 import freq_analysis
 from collections import Counter
 import english_letter_freq as elf
+
+#TODO: add command-line arg to allow a specified word match, guess word=word in ciphertext to match, so once a good word is found the code can focus tries agaisnt that word match only
 
 random.seed()
 
@@ -18,8 +19,12 @@ def process_args():
     parser.add_argument( '-r', '--respect_spaces', action='store_true' )
     parser.add_argument( '-f', '--use_freq_analysis', action='store_true' )
     parser.add_argument( '-w', '--word-guess' )
+    parser.add_argument( '-s', '--searchspace', type=int )
+    parser.add_argument( '-d', '--dict' )
+
     args = parser.parse_args()
     return args
+
 
 def brute_chi_sq(ciphertext_freq_analysis, ciphertext ):
     #build normalized sqared error for every letter -> letter combination, 26^2 
@@ -170,9 +175,16 @@ if __name__ == "__main__":
         word_guess = args.word_guess.lower()
         word_guess_profile = word_profile(word_guess)
         words = []
-    print( ciphertext )
+    if len(ciphertext ) > 180:
+        print( ciphertext[0:180]+'...' )
+    else:
+        print( ciphertext )
     if respect_spaces:
         words = ciphertext.split()
+    if args.searchspace:
+        searchspace = int(args.searchspace)
+    else:
+        searchspace = 100
 
     if respect_spaces and word_guess:
         len_matches = {} #{ length: [count, [word list], [word indexs]], ... }
@@ -190,28 +202,34 @@ if __name__ == "__main__":
             for key, val in len_matches.items():
                 a = list(set(val[1]))
                 unique_len_matches[key] = [len(a), a]
+            print( unique_len_matches )
             #remove word matches that have incompatible profiles
             to_remove = []  
-            for word in unique_len_matches[len(word_guess)][1]:
-                if word_profile(word) != word_guess_profile:
-                    print( word+'('+word_profile(word)+') incompatible with '+word_guess_profile+'('+word_guess+')')
-                    to_remove.append(word)
-                #else:
-                #    print( word+'('+word_profile(word)+') compatible with '+word_guess_profile+'('+word_guess+')')
-            for word in to_remove:
-                len_matches[len(word_guess)][0] -= 1
-                unique_len_matches[len(word_guess)][0] -= 1
-                unique_len_matches[len(word_guess)][1].remove(word)
+            if len(word_guess) not in unique_len_matches:
+                print( 'there are no words of length '+str(len(word_guess))+' in the ciphertext, try removing the respect_spaces flag'  )
+                exit()
+                
+            if len(word_guess) in unique_len_matches:
+                for word in unique_len_matches[len(word_guess)][1]:
+                    if word_profile(word) != word_guess_profile:
+                        print( word+'('+word_profile(word)+') incompatible with '+word_guess_profile+'('+word_guess+')')
+                        to_remove.append(word)
+                    #else:
+                    #    print( word+'('+word_profile(word)+') compatible with '+word_guess_profile+'('+word_guess+')')
+                for word in to_remove:
+                    len_matches[len(word_guess)][0] -= 1
+                    unique_len_matches[len(word_guess)][0] -= 1
+                    unique_len_matches[len(word_guess)][1].remove(word)
 
-            #check for words that match the length of the guess word
-            #if len(word) == len(word_guess):
-            #    if word not in unique_len_matches:
-            #        unique_len_matches[word] = ''
-            #print( 'there are '+str(unique_len_matches[len(word_guess)][0])+' unique words of the same length as '+word_guess+', '+str(len_matches[len(word_guess)][0])+' total' )
-            #print( 'len_matches' )
-            #print( len_matches[len(word_guess)] )
-            #print( 'unique_len_matches' )
-            #print( unique_len_matches[len(word_guess)] )
+                #check for words that match the length of the guess word
+                #if len(word) == len(word_guess):
+                #    if word not in unique_len_matches:
+                #        unique_len_matches[word] = ''
+                #print( 'there are '+str(unique_len_matches[len(word_guess)][0])+' unique words of the same length as '+word_guess+', '+str(len_matches[len(word_guess)][0])+' total' )
+                #print( 'len_matches' )
+                #print( len_matches[len(word_guess)] )
+                #print( 'unique_len_matches' )
+                #print( unique_len_matches[len(word_guess)] )
 
     alphabet = range(0,26)
     if args.use_freq_analysis:
@@ -239,45 +257,48 @@ if __name__ == "__main__":
                     #alpha_1.remove(ord(word_guess[i])-97)
                     #exclude_list.append(ord(word_guess[i])-97)
                     exclude_pos.append(ord(lett)-97)
-                #populate rest of alphabet based on freq_analysis
                 print( 'alpha' )
                 print( alpha )
-                random_order = list(range(0,26))
-                for a in range(0,26):
-                    if alpha[a] != '~':
-                        random_order.remove(a)
-                random.shuffle(random_order)
-                print( 'random_order' )
-                print( random_order )
-                for z in random_order:
-                    a = chr(z+97)
-                    #print( str(z)+'('+a+')==' )
-                    if z not in exclude_pos and alpha[z] == '~':
-                        c = 0
-                        for k,v in brute_chi_dict[a].items():
-                            if ord(k)-97 not in alpha:
-                                #exclude_list.append(k)
-                                #tmp_alpha[ord(k)-97] = z
-                                alpha[z] = ord(k)-97
-                                #print( k+'('+str(ord(k)-97)+') is '+str(c)+' best match' )
-                                #print( alpha )
-                                break
-                            c += 1
-                for x in range(0,26):
-                    #tmp_alpha_l.append( tmp_alpha[x] )
-                    tmp_alpha_l.append( alpha[x] )
-                #print( tmp_alpha )
-                #print( 'alpha' )
-                #print( alpha )
-                #dupes = [k for k,v in Counter(alpha).items() if v > 1]
-                #if len( dupes ) == 0:
-                #    print( 'alpha list has no duplicates' )
-                #else:
-                #    print( 'alpha list has duplicates:' )
-                #    print( dupes )
-                plaintext = decrypt( ciphertext, alpha )
-                print( plaintext )
-
+                #populate rest of alphabet based on freq_analysis
+                for i in range(0,int(searchspace/unique_len_matches[len(word_guess)][0])):
+                    alpha_l = []
+                    #copy alpha -> alpha_l
+                    for a in alpha:
+                        alpha_l.append(a)
+                    random_order = list(range(0,26))
+                    #reduce random_order, removing the already assigned letters
+                    for a in range(0,26):
+                        if alpha[a] != '~':
+                            random_order.remove(a)
+                    random.shuffle(random_order)
+                    #print( 'random_order' )
+                    #print( random_order )
+                    for z in random_order:
+                        a = chr(z+97)
+                        if z not in exclude_pos and alpha_l[z] == '~':
+                            c = 0
+                            for k,v in brute_chi_dict[a].items():
+                                if ord(k)-97 not in alpha_l:
+                                    #exclude_list.append(k)
+                                    alpha_l[z] = ord(k)-97
+                                    break
+                                c += 1
+                    #print( 'alpha_l' )
+                    #print( alpha_l )
+                    guess_plaintext = decrypt( ciphertext, alpha_l )
+                    #print( guess_plaintext )
+                    ciphertext_short = ciphertext[0:120]
+                    guess_plaintext_short = guess_plaintext[0:120]
+                    match_text_short = match_vs_dict.match_vs_dict_respect_spaces( guess_plaintext_short )
+                    count_ignore_chars = ciphertext_short.count(' ') + ciphertext_short.count('.') + ciphertext_short.count(',') + ciphertext_short.count('\'')
+                    no_match_count = match_text_short.count('~') - count_ignore_chars
+                    t1 = len(ciphertext_short)-count_ignore_chars
+                    percent = ((t1-no_match_count)/t1)*100
+                    if percent > 50:
+                        print( 'alpha_l' )
+                        print( alpha_l )
+                        print( match_text_short )
+                        print( 'matched '+str(t1-no_match_count)+' of '+str(t1)+' characters, match '+str(percent)+'%' )
 
         elif respect_spaces:                    #CASE 2: use_freq_analysis, respect_spaces flags
             c = 0
