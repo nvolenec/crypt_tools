@@ -1,5 +1,4 @@
 
-
 class Dict:
     
     def __init__(self, dictfile='google_and_lewis_carroll_dict.txt-sorted', split_by_first_let=0 ):

@@ -1,8 +1,10 @@
 #!/usr/bin/python3
 import argparse
 import string
-import match_vs_dict
 import itertools
+from dict import Dict
+
+#TODO: maybe make permutation search smarter, start with shorter permutations then prune from full list of permutations of length 10--not sure how
 
 def process_args():
     parser = argparse.ArgumentParser( prog='monoalpha_sub_solver',
@@ -60,10 +62,11 @@ if __name__ == "__main__":
                     c += 1
             plaintext_try_s = ''.join(plaintext_try)
             #print( plaintext_try_s )
+            match_dict = Dict( 'google_and_lewis_carroll_dict.txt-sorted-no_1_lett', split_by_first_let=1 )
             if respect_spaces:
-                match_text = match_vs_dict.match_vs_dict( plaintext_try_s, 1 )
+                match_text = match_dict.match_vs_dict( plaintext_try_s, 1 )
             else:
-                match_text = match_vs_dict.match_vs_dict( plaintext_try_s, 0 )
+                match_text = match_dict.match_vs_dict( plaintext_try_s, 0 )
 
             if len(ciphertext) > 180:
                 ciphertext_short = ciphertext[0:180]

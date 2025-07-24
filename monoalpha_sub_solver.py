@@ -1,8 +1,7 @@
 #!/usr/bin/python3
 import argparse
 import string
-import match_vs_dict
-import threading
+from dict import Dict
 import random
 import freq_analysis
 from collections import Counter
@@ -164,6 +163,21 @@ def decrypt( ciphertext, keyword ): #keyword is a list of 26 ints
             plaintext += char_x
     return plaintext
 
+def decrypt_try_and_match_vs_dict( ciphertext, sub_alphabet, match_dict ):
+    guess_plaintext = decrypt( ciphertext, sub_alphabet )
+    ciphertext_short = ciphertext[0:120]
+    guess_plaintext_short = guess_plaintext[0:120]
+    match_text_short = match_dict.match_vs_dict_respect_spaces( guess_plaintext_short )
+    count_ignore_chars = ciphertext_short.count(' ') + ciphertext_short.count('.') + ciphertext_short.count(',') + ciphertext_short.count('\'')
+    no_match_count = match_text_short.count('~') - count_ignore_chars
+    t1 = len(ciphertext_short)-count_ignore_chars
+    percent = ((t1-no_match_count)/t1)*100
+    if percent > 50:
+        print( 'alpha_l' )
+        print( alpha_l )
+        print( match_text_short )
+        print( 'matched '+str(t1-no_match_count)+' of '+str(t1)+' characters, match '+str(percent)+'%' )
+
 
 if __name__ == "__main__":
     args = process_args()
@@ -232,179 +246,127 @@ if __name__ == "__main__":
                 #print( unique_len_matches[len(word_guess)] )
 
     alphabet = range(0,26)
+    match_dict = Dict( 'google_and_lewis_carroll_dict.txt-sorted-no_1_lett', split_by_first_let=1 )
+    use_freq_analysis = 0
+    ciphertext_freq_analysis = freq_analysis.do_freq_count( ciphertext )
+    print( 'ciphertext_freq_analysis' )
+    print( ciphertext_freq_analysis )
     if args.use_freq_analysis:
-        ciphertext_freq_analysis = freq_analysis.do_freq_count( ciphertext )
-        print( 'ciphertext_freq_analysis' )
-        print( ciphertext_freq_analysis )
+        use_freq_analysis = 1
         brute_chi_dict = brute_chi_sq( ciphertext_freq_analysis, ciphertext )
-        letters_in_freq_order = { 'e', 't', 'a', 'o', 'i', 'n', 's', 'h', 'r', 'd', 'l', 'u',
-        'c', 'm', 'w', 'f', 'g', 'p', 'y', 'b', 'x', 'v', 'k', 'j', 'q', 'z', }
-        print( 'freq_analysis:' )
-        print( ciphertext_freq_analysis )
-        if respect_spaces and word_guess:       #CASE 1: use_freq_analysis, respect_spaces, word guess flags
-            for word in unique_len_matches[len(word_guess)][1]: 
-                alpha = [ '~' for _ in range(0,26) ]
-                #alpha_1 = list(range(0,26))
-                #exclude_list = []
-                exclude_pos = []
-                tmp_alpha = {}
-                tmp_alpha_l = []
-                print('------'+word_guess+'=>'+word+'--------')
-                for i, lett in enumerate(word):
-                    #print( str(i)+'  '+lett )
-                    #set guess word in alphabet
-                    alpha[ord(lett)-97] = ord(word_guess[i])-97
-                    #alpha_1.remove(ord(word_guess[i])-97)
-                    #exclude_list.append(ord(word_guess[i])-97)
-                    exclude_pos.append(ord(lett)-97)
-                print( 'alpha' )
-                print( alpha )
-                #populate rest of alphabet based on freq_analysis
-                for i in range(0,int(searchspace/unique_len_matches[len(word_guess)][0])):
-                    alpha_l = []
-                    #copy alpha -> alpha_l
-                    for a in alpha:
-                        alpha_l.append(a)
-                    random_order = list(range(0,26))
-                    #reduce random_order, removing the already assigned letters
-                    for a in range(0,26):
-                        if alpha[a] != '~':
-                            random_order.remove(a)
-                    random.shuffle(random_order)
-                    #print( 'random_order' )
-                    #print( random_order )
-                    for z in random_order:
-                        a = chr(z+97)
-                        if z not in exclude_pos and alpha_l[z] == '~':
-                            c = 0
+    if respect_spaces and word_guess:       #CASE 1: respect_spaces, word guess flags
+        for word in unique_len_matches[len(word_guess)][1]: 
+            alpha = [ '~' for _ in range(0,26) ]
+            #alpha_1 = list(range(0,26))
+            #exclude_list = []
+            exclude_pos = []
+            print('------'+word_guess+'=>'+word+'--------')
+            for i, lett in enumerate(word):
+                #print( str(i)+'  '+lett )
+                #set guess word in alphabet
+                alpha[ord(lett)-97] = ord(word_guess[i])-97
+                #alpha_1.remove(ord(word_guess[i])-97)
+                #exclude_list.append(ord(word_guess[i])-97)
+                exclude_pos.append(ord(lett)-97)
+            print( 'alpha' )
+            print( alpha )
+            #populate rest of alphabet based on freq_analysis
+            for i in range(0,int(searchspace/unique_len_matches[len(word_guess)][0])):
+                alpha_l = []
+                #copy alpha -> alpha_l
+                for a in alpha:
+                    alpha_l.append(a)
+                random_order = list(range(0,26))
+                #reduce random_order, removing the already assigned letters
+                for a in range(0,26):
+                    if alpha[a] != '~':
+                        random_order.remove(a)
+                random.shuffle(random_order)
+                #print( 'random_order' )
+                #print( random_order )
+                for z in random_order:
+                    a = chr(z+97)
+                    if z not in exclude_pos and alpha_l[z] == '~':
+                        if use_freq_analysis:
                             for k,v in brute_chi_dict[a].items():
                                 if ord(k)-97 not in alpha_l:
                                     #exclude_list.append(k)
                                     alpha_l[z] = ord(k)-97
                                     break
-                                c += 1
-                    #print( 'alpha_l' )
-                    #print( alpha_l )
-                    guess_plaintext = decrypt( ciphertext, alpha_l )
-                    #print( guess_plaintext )
-                    ciphertext_short = ciphertext[0:120]
-                    guess_plaintext_short = guess_plaintext[0:120]
-                    match_text_short = match_vs_dict.match_vs_dict_respect_spaces( guess_plaintext_short )
-                    count_ignore_chars = ciphertext_short.count(' ') + ciphertext_short.count('.') + ciphertext_short.count(',') + ciphertext_short.count('\'')
-                    no_match_count = match_text_short.count('~') - count_ignore_chars
-                    t1 = len(ciphertext_short)-count_ignore_chars
-                    percent = ((t1-no_match_count)/t1)*100
-                    if percent > 50:
-                        print( 'alpha_l' )
-                        print( alpha_l )
-                        print( match_text_short )
-                        print( 'matched '+str(t1-no_match_count)+' of '+str(t1)+' characters, match '+str(percent)+'%' )
+                        else:
+                            random_order2 = list(range(0,26))
+                            random.shuffle(random_order2)
+                            for r in random_order2:
+                                if ord(r)-97 not in alpha_l:
+                                    alpha_l[z] = ord(r)-97
+                                    break
+                #print( 'alpha_l' )
+                #print( alpha_l )
+                decrypt_try_and_match_vs_dict( ciphertext, alpha_l, match_dict )
 
-        elif respect_spaces:                    #CASE 2: use_freq_analysis, respect_spaces flags
-            c = 0
-            while c < 26*26:
-                used_list = []
-                tmp_alpha = {}
-                tmp_alpha_l = []
-                random_order = list(range(0,26))
-                random.shuffle(random_order)
-            
-                for z in random_order:
-                    a = chr(z+97)
-                    #print( '-------'+a+'--------' )
-                    #print( brute_chi_dict[a] )
-                    for k,v in brute_chi_dict[a].items():
-                        if k not in used_list:
-                            used_list.append(k)
-                            tmp_alpha[ord(k)-97] = z    #[a]->b or [b]->a?
-                            break
-                for x in range(0,26):
-                    tmp_alpha_l.append( tmp_alpha[x] )
+    elif respect_spaces:                    #CASE 2: respect_spaces flags, no word guess
+        c = 0
+        while c < int(searchspace):
+            alpha = [ '~' for _ in range(0,26) ]
+            exclude_pos = []
+            used_list = []
+            random_order = list(range(0,26))
+            random.shuffle(random_order)
+            alpha_l = []
+            for a in alpha:
+                alpha_l.append(a)
+        
+            for z in random_order:
+                a = chr(z+97)
+                #print( '-------'+a+'--------' )
+                #print( brute_chi_dict[a] )
+                if alpha_l[z] == '~':
+                    if use_freq_analysis:
+                        for k,v in brute_chi_dict[a].items():
+                            if ord(k)-97 not in alpha_l:
+                                used_list.append(k)
+                                alpha_l[z] = ord(k)-97
+                                break
+                    else:
+                        random_order2 = list(range(0,26))
+                        random.shuffle(random_order2)
+                        for r in random_order2:
+                            if ord(r)-97 not in alpha_l:
+                                alpha_l[z] = ord(r)-97
+                                break
+            decrypt_try_and_match_vs_dict( ciphertext, alpha_l, match_dict )
+            c += 1
 
-                #print( tmp_alpha )
-                #print( tmp_alpha_l )
-                c += 1
-        else:                                   #CASE 3: use_freq_analysis flag only
-            c = 0
-            while c < 26*26:
-                used_list = []
-                tmp_alpha = {}
-                tmp_alpha_l = []
-                random_order = list(range(0,26))
-                random.shuffle(random_order)
-            
-                for z in random_order:
-                    a = chr(z+97)
-                    #print( '-------'+a+'--------' )
-                    #print( brute_chi_dict[a] )
-                    for k,v in brute_chi_dict[a].items():
-                        if k not in used_list:
-                            used_list.append(k)
-                            tmp_alpha[ord(k)-97] = z    #[a]->b or [b]->a?
-                            break
-                for x in range(0,26):
-                    if x in tmp_alpha:
-                        tmp_alpha_l.append( tmp_alpha[x] )
-
-                #print( tmp_alpha )
-                #print( tmp_alpha_l )
-                c += 1
-
-    else: #no freq_analysis 
-        if respect_spaces and word_guess:       #CASE 4: respect_spaces, word guess flags
-
-            for word in unique_len_matches[len(word_guess)][1]: 
-                alpha = [ '~' for _ in range(26) ]
-                alpha_1 = list(range(0,26))
-                exclude_list = []
-                exclude_pos = []
-                print('------'+word_guess+'=>'+word+'--------')
-                for i, lett in enumerate(word):
-                    #print( str(i)+'  '+lett )
-                    #set guess word in alphabet
-                    alpha[ord(lett)-97] = ord(word_guess[i])-97
-                    alpha_1.remove(ord(word_guess[i])-97)
-                    #exclude_list.append(ord(word_guess[i])-97)
-                    exclude_pos.append(ord(lett)-97)
-                #print('alpha')
-                #print(alpha)
-                random.shuffle(alpha_1)
-                #print('alpha_1')
-                #print(alpha_1)
-
-                #populate rest of alphabet randomly
-                c = 0
-                for i in range(0,26):
-                    if i not in exclude_pos:
-                        alpha[i] = alpha_1[c]
-                        c += 1
-                #print('alpha')
-                print(alpha)
-                plaintext = decrypt( ciphertext, alpha )
-                print( plaintext )
-
-
-        elif respect_spaces:                    #CASE 5: respect_spaces flag
-            c = 1
-            while c <= 100:
-                alpha_copy = list(range(0,26))
-                random.shuffle(alpha_copy) 
-                print( alpha_copy )
-                plaintext = decrypt( ciphertext, alpha_copy )
-                print( plaintext )
-                c += 1
-        else:                                   #CASE 6: no flags
-            c = 1
-            while c <= 100:
-                alpha_copy = list(range(0,26))
-                random.shuffle(alpha_copy) 
-                print( alpha_copy )
-                plaintext = decrypt( ciphertext, alpha_copy )
-                print( plaintext )
-                c += 1
-
-
-
-    plaintext = ''
-
+    else:                                   #CASE 3: no word guess or respect spaces
+        c = 0
+        while c < int(searchspace):
+            alpha = [ '~' for _ in range(0,26) ]
+            exclude_pos = []
+            used_list = []
+            random_order = list(range(0,26))
+            random.shuffle(random_order)
+            alpha_l = []
+            for a in alpha:
+                alpha_l.append(a)
+        
+            for z in random_order:
+                a = chr(z+97)
+                #print( '-------'+a+'--------' )
+                #print( brute_chi_dict[a] )
+                if alpha_l[z] == '~':
+                    if use_freq_analysis:
+                        for k,v in brute_chi_dict[a].items():
+                            if ord(k)-97 not in alpha_l:
+                                used_list.append(k)
+                                alpha_l[z] = ord(k)-97
+                                break
+                    else:
+                        random_order2 = list(range(0,26))
+                        random.shuffle(random_order2)
+                        for r in random_order2:
+                            if ord(r)-97 not in alpha_l:
+                                alpha_l[z] = ord(r)-97
+                                break
+            decrypt_try_and_match_vs_dict( ciphertext, alpha_l, match_dict )
+            c += 1
 
