@@ -38,7 +38,7 @@ class Dict:
         text_copy = text_copy.replace('.', ' ')
         text_copy = text_copy.replace(':', ' ')
         text_copy = text_copy.replace(':', ' ')
-        text_copy = text_copy.replace('\'', ' ')
+        text_copy = text_copy.replace(chr(39), ' ')
         #print( text_copy )
         text_split = text_copy.split()
         while x < text_len:

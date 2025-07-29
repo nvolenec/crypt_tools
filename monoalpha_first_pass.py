@@ -5,6 +5,7 @@ import dict
 import calc_ioc
 import freq_analysis
 import english_letter_freq as elf
+from collections import Counter
 
 
 def process_args():
@@ -33,16 +34,18 @@ def decrypt( ciphertext, keyword ): #keyword is a list of 26 ints
 if __name__ == "__main__":
     args = process_args()
     with open( args.ciphertext_file, 'r' ) as f:
-        ciphertext = f.read().lower()
+        ciphertext = f.read()
+    ciphertext_low = ciphertext.lower()
     if len(ciphertext ) > 180:
         print( ciphertext[0:180]+'...' )
     else:
         print( ciphertext )
 
-    ioc = calc_ioc.index_of_coincidence( ciphertext )
-    print( 'IOC' )
-    print( ioc )
-    ciphertext_freq_analysis = freq_analysis.do_freq_count( ciphertext )
+    cc = Counter(ciphertext)
+    cc_low = Counter(ciphertext_low)
+    ioc = calc_ioc.index_of_coincidence( ciphertext_low )
+    print( "IOC: {:.4f}  {} unique chars, {} unique case insensitive chars".format(ioc, len(cc),len(cc_low)) )
+    ciphertext_freq_analysis = freq_analysis.do_freq_count( ciphertext_low )
     print( 'ciphertext_freq_analysis' )
     print( ciphertext_freq_analysis )
     alpha = list(range(0,26))
@@ -58,9 +61,9 @@ if __name__ == "__main__":
 
 
     word_dict = dict.Dict( 'google_and_lewis_carroll_dict.txt-sorted-no_1_lett', 1 )
-    count_ignore_chars = ciphertext.count(' ') + ciphertext.count('.') + ciphertext.count(',') + ciphertext.count('\'')
-    t1 = len(ciphertext)-count_ignore_chars
-    plaintext_try = decrypt( ciphertext, alpha_rev )
+    count_ignore_chars = ciphertext_low.count(' ') + ciphertext.count('.') + ciphertext.count(',') + ciphertext.count('\'')
+    t1 = len(ciphertext_low)-count_ignore_chars
+    plaintext_try = decrypt( ciphertext_low, alpha_rev )
     match_text = word_dict.match_vs_dict( plaintext_try, 0 )
     no_match_count = match_text.count('~') - count_ignore_chars
     percent = ((t1-no_match_count)/t1)*100
@@ -71,7 +74,7 @@ if __name__ == "__main__":
         print( 'matched '+str(t1-no_match_count)+' of '+str(t1)+' characters, match '+str(percent)+'%' )
 
     for a in range( 1,26 ):
-        plaintext_try = decrypt( ciphertext, alpha_caesar[a] )
+        plaintext_try = decrypt( ciphertext_low, alpha_caesar[a] )
         match_text = word_dict.match_vs_dict( plaintext_try, 0 )
         no_match_count = match_text.count('~') - count_ignore_chars
         percent = ((t1-no_match_count)/t1)*100
@@ -79,7 +82,8 @@ if __name__ == "__main__":
             print( 'key: ' )
             print( alpha_caesar[a] )
             print( match_text )
-            print( 'matched '+str(t1-no_match_count)+' of '+str(t1)+' characters, match '+str(percent)+'%' )
+            print( plaintext_try )
+            print( "matched {} of {} chars, match {:.2f}%".format( (t1-no_match_count), t1, percent ))
 
 
 

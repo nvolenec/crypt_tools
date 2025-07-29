@@ -268,8 +268,9 @@ if __name__ == "__main__":
                 #alpha_1.remove(ord(word_guess[i])-97)
                 #exclude_list.append(ord(word_guess[i])-97)
                 exclude_pos.append(ord(lett)-97)
-            print( 'alpha' )
-            print( alpha )
+            print('a b c d e f g h i j k l m n o p q r s t u v w x y z')
+            print( ' '.join(map(str, alpha)) )
+            #print( alpha )
             #populate rest of alphabet based on freq_analysis
             for i in range(0,int(searchspace/unique_len_matches[len(word_guess)][0])):
                 alpha_l = []
