@@ -22,6 +22,32 @@ def index_of_coincidence(text):
     ic = numerator / denominator if denominator != 0 else 0
     return ic
 
+def index_of_coincidence_for_len(text, length):
+    # Clean the text: remove non-alphabetic characters and convert to uppercase
+    text = ''.join(filter(str.isalpha, text.upper()))
+    N = len(text)
+
+    if N <= 1:
+        return 0.0  # Avoid division by zero
+
+    # Count frequency of each letter
+    frequencies = {}
+    for i in range( 0, len(text), length ):
+        key = ''
+        for a in range(0, length):
+            key += text[i+a]
+        if key not in frequencies:
+            frequencies[key] = 0
+        frequencies[key] += 1
+    print( frequencies )
+
+    # Compute the Index of Coincidence
+    numerator = sum(f * (f - 1) for f in frequencies.values())
+    denominator = N * (N - 1)
+
+    ic = numerator / denominator if denominator != 0 else 0
+    return ic
+
 def main():
     if len(sys.argv) != 2:
         print("Usage: python ic_calculator.py <ciphertext_file>")
