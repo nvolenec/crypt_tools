@@ -25,10 +25,10 @@ def index_of_coincidence(text):
 def index_of_coincidence_for_len(text, length):
     # Clean the text: remove non-alphabetic characters and convert to uppercase
     text = ''.join(filter(str.isalpha, text.upper()))
-    N = len(text)
+    char_count = int(len(text)/length)
 
-    if N <= 1:
-        return 0.0  # Avoid division by zero
+    if char_count <= 1:
+        return 0.0  
 
     # Count frequency of each letter
     frequencies = {}
@@ -39,13 +39,13 @@ def index_of_coincidence_for_len(text, length):
         if key not in frequencies:
             frequencies[key] = 0
         frequencies[key] += 1
-    print( frequencies )
+    #print( frequencies )
 
     # Compute the Index of Coincidence
     numerator = sum(f * (f - 1) for f in frequencies.values())
-    denominator = N * (N - 1)
+    denominator = char_count * (char_count - 1)
 
-    ic = numerator / denominator if denominator != 0 else 0
+    ic = numerator / denominator
     return ic
 
 def main():

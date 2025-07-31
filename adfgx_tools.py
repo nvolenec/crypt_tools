@@ -61,7 +61,7 @@ class ColTrans:
 
 
     def decrypt( self, ciphertext ):
-        print( self.keyword_decrypt_order )
+        #print( self.keyword_decrypt_order )
         ret =  ['_'] * len( ciphertext)
         l = len(ciphertext)
         m = len(self.keyword)
