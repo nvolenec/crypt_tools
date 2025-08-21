@@ -31,32 +31,43 @@ class Dict:
         text = text.lower()
         text_len = len( text )
         match_text = ''
-        x=0
-        match = 0
         text_copy = text
+        #standardize characters for 
         text_copy = text_copy.replace(',', ' ')
         text_copy = text_copy.replace('.', ' ')
         text_copy = text_copy.replace(':', ' ')
-        text_copy = text_copy.replace(':', ' ')
+        text_copy = text_copy.replace(';', ' ')
+        text_copy = text_copy.replace('\n', ' ')
         text_copy = text_copy.replace(chr(39), ' ')
-        #print( text_copy )
-        text_split = text_copy.split()
+        
+        print( text_copy )
+        #if the input string has spaces
+        #TODO: needs a alternative for non-space demlimited input
+        text_split = text_copy.split(' ')
+        x = 0
+        match = 0
         while x < text_len:
             for text_word in text_split:
-                text_word_len = len( text_word )
-                for try_word in self.get_words_of_len_starting_with( text_word_len, text_word[0] ):
-                    if try_word == text_word:
-                        match_text += try_word
-                        x += text_word_len
-                        match = 1
-                        break
-                if match:
-                    match = 0
+                if text_word == '':
+                    x += 1
+                    if x < len( text ):
+                        match_text += text[x-1]  #for spaces between words
                 else:
-                    match_text += '~'*text_word_len
-                    x += text_word_len
-                x += 1
-                match_text += '~'  #for spaces between words
+                    text_word_len = len( text_word )
+                    for try_word in self.get_words_of_len_starting_with( text_word_len, text_word[0] ):
+                        if try_word == text_word:
+                            match_text += try_word
+                            x += text_word_len
+                            match = 1
+                            break
+                    if match:
+                        match = 0
+                    else:
+                        match_text += '~'*text_word_len
+                        x += text_word_len
+                    x += 1
+                    #match_text += '~'  #for spaces between words
+                    match_text += text[x-1]  #for spaces between words
         return match_text
     
     def match_vs_dict_ignore_spaces( self, text ):
@@ -85,6 +96,13 @@ class Dict:
                 x += 1
                 match_text += '~'
         return match_text
+
+    def evaluate_match( ciphertext, matchtext, threshold ):
+        len_ciphertext = len( ciphertext )
+        no_match_count = matchtext.count('~')
+        percent = ((len_ciphertext-no_match_count)/len_ciphertext)*100
+        return (percent, len_ciphertext-no_match_count)
+
 
     def match_vs_dict( self, text, respect_spaces ):
         if respect_spaces:
