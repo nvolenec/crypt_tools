@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Gold-Bug Cipher Decoder (Highlight Unknowns)</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    textarea { width: 100%; font-size: 16px; padding: 6px; margin-top: 5px; }
+	input { width: 100%; font-size: 18px; font-weight: bold; padding: 6px; margin-top: 5px; }
+    .output {
+      white-space: pre-wrap;
+      background: #f0f0f0;
+      padding: 10px;
+      margin-top: 15px;
+      border: 1px solid #ccc;
+      font-size: 18px;
+    }
+    .button-container { margin-top: 10px; }
+    button.char-btn {
+      margin: 3px;
+      padding: 6px 12px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .mapping label {
+      display: inline-block;
+      margin: 8px 10px 2px 0;
+      width: 130px;
+    }
+    .mapping input {
+      width: 50px;
+      text-align: center;
+      font-size: 16px;
+    }
+    .unknown {
+      color: red;
+      font-weight: bold;
+	{
+  </style>
+</head>
+<body>
+
+  <h1>Gold-Bug Cipher Decoder</h1>
+
+  <label for="ciphertext">Enter Ciphertext:</label>
+  <textarea id="ciphertext" placeholder="Type here..."></textarea>
+
+  <div class="button-container">
+    <button class="char-btn" onclick="insertChar('†')">†</button>
+    <button class="char-btn" onclick="insertChar('‡')">‡</button>
+    <button class="char-btn" onclick="insertChar('¶')">¶</button>
+    <button class="char-btn" onclick="insertChar('¢')">¢</button>
+	<button class="char-btn" onclick="insertChar(';')">;</button>
+	<button class="char-btn" onclick="insertChar(':')">:</button>
+	<button class="char-btn" onclick="insertChar(',')">,</button>
+	<button class="char-btn" onclick="insertChar('.')">.</button>
+	<button class="char-btn" onclick="insertChar('-')">-</button>
+	<button class="char-btn" onclick="insertChar('*')">*</button>
+	<button class="char-btn" onclick="insertChar('$')">$</button>
+	<button class="char-btn" onclick="insertChar('?')">?</button>
+	<button class="char-btn" onclick="insertChar('(')">(</button>
+	<button class="char-btn" onclick="insertChar(')')">)</button>
+	<button class="char-btn" onclick="insertChar('[')">[</button>
+	<button class="char-btn" onclick="insertChar(']')">]</button>
+  </div>
+
+  <div class="mapping">
+    <h3>Keyboard Mapping for Special Characters</h3>
+    <label>Map key to †: <input id="map-†" maxlength="1" value="t"></label>
+    <label>Map key to ‡: <input id="map-‡" maxlength="1" value="y"></label>
+    <label>Map key to ¶: <input id="map-¶" maxlength="1" value="p"></label>
+    <label>Map key to ¢: <input id="map-¢" maxlength="1" value="c"></label>
+	<label>Map key to :; <input id="map-;" maxlength="1" value=";"></label>
+	<label>Map key to :: <input id="map-:" maxlength="1" value="l"></label>
+	<label>Map key to :. <input id="map-." maxlength="1" value="."></label>
+	<label>Map key to :, <input id="map-," maxlength="1" value=","></label>
+	<label>Map key to :- <input id="map--" maxlength="1" value="-"></label>
+	<label>Map key to :* <input id="map-*" maxlength="1" value="o"></label>
+	<label>Map key to :$ <input id="map-$" maxlength="1" value="s"></label>
+	<label>Map key to :? <input id="map-?" maxlength="1" value="q"></label>
+	<label>Map key to :( <input id="map-(" maxlength="1" value="e"></label>
+	<label>Map key to :) <input id="map-)" maxlength="1" value="r"></label>
+	<label>Map key to :[ <input id="map-[" maxlength="1" value="d"></label>
+	<label>Map key to :] <input id="map-]" maxlength="1" value="f"></label>
+  </div>
+
+  <h3>Decoded Output:</h3>
+  <div class="output" id="output"></div>
+
+  <script>
+    const goldBugMap = {
+      '5': 'A', '2': 'B', '-': 'C', '†': 'D', '8': 'E',
+      '1': 'F', '3': 'G', '4': 'H', '6': 'I', ',': 'J',
+      '7': 'K', '0': 'L', '9': 'M', '*': 'N', '‡': 'O',
+      '.': 'P', '$': 'Q', '(': 'R', ')': 'S', ';': 'T',
+      '?': 'U', '¶': 'V', ']': 'W', '¢': 'X', ':': 'Y',
+      '[': 'Z'
+    };
+
+    const specialSymbols = ['†', '‡', '¶', '¢', ';', ':', '.', ',', '-', '*', '$', '?', '(', ')', '[', ']'];
+
+    function insertChar(char) {
+      const textarea = document.getElementById('ciphertext');
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const value = textarea.value;
+      textarea.value = value.slice(0, start) + char + value.slice(end);
+      textarea.selectionStart = textarea.selectionEnd = start + 1;
+      textarea.focus();
+      decode();
+    }
+
+    function getKeyToSymbolMap() {
+      const map = {};
+      for (const symbol of specialSymbols) {
+        const key = document.getElementById(`map-${symbol}`).value.toLowerCase();
+        if (key) map[key] = symbol;
+      }
+      return map;
+    }
+
+    document.getElementById('ciphertext').addEventListener('keydown', function(e) {
+      const map = getKeyToSymbolMap();
+      const key = e.key.toLowerCase();
+      if (map[key]) {
+        e.preventDefault();
+        insertChar(map[key]);
+      }
+    });
+
+    function decode() {
+      const input = document.getElementById('ciphertext').value;
+      let htmlOutput = '';
+      for (const char of input) {
+        if (goldBugMap[char]) {
+          htmlOutput += goldBugMap[char];
+        } else {
+          htmlOutput += `<span class="unknown">${char}</span>`;
+        }
+      }
+      document.getElementById('output').innerHTML = htmlOutput;
+    }
+
+    document.getElementById('ciphertext').addEventListener('input', decode);
+    specialSymbols.forEach(symbol => {
+      document.getElementById(`map-${symbol}`).addEventListener('input', decode);
+    });
+
+    decode(); // run on load
+  </script>
+
+</body>
+</html>
