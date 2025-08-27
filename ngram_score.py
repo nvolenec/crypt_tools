@@ -4,7 +4,17 @@ from get_ngrams import get_ngram_data
 
 def process_args():
     parser = argparse.ArgumentParser( prog='ngram_score',
-                                      description='generate ngram score based on specified text and ngram length' )
+                                      description='generate ngram score based on specified text and ngram length',
+                                      formatter_class=argparse.RawDescriptionHelpFormatter,
+                                      epilog="e.x. for trigrams: hellotherefriend -> -42.624902\n"
+                                             "                   zuaayfzuruoriueb -> -75.711233\n"
+                                             "                   ejzzfgejljmlsjwk -> -90.312349\n"
+                                             "                   ghnnctghshisuhoe -> -64.815609\n"
+                                             "                   ikggrzikykfyqkld -> -91.449079\n"
+                                             "                   akhhuqakfktfjkdo -> -89.589869\n"
+                                             "                   gayynvgarahrpadl -> -68.828649\n"
+                                             "                   pottgipoaovakosb -> -68.253187\n"
+                                             "                   hozznjhowolwuobx -> -81.541286\n")
     parser.add_argument( '-l', '--length' )
     parser.add_argument( '-c', '--ciphertext' )
     parser.add_argument( '-f', '--cipherfile' )
